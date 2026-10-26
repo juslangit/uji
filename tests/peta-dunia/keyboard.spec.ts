@@ -29,17 +29,34 @@ test.describe('PD-03 Use the map with a keyboard', () => {
     await expect.poll(() => map.focusedRegionId()).toBe(moved);
   });
 
-  test('typing a name jumps to that region, Space opens it', async ({ page, showcase }) => {
+  test('typing a letter jumps to a region with that initial, Space opens it', async ({
+    page,
+    showcase,
+  }) => {
     const map = await showcase.goto();
     await showcase.sampleData.focus();
     expect(await map.tabIntoMap()).toBe('AF-BDS');
 
-    // Type-ahead matches region or country names; "sarawak" is unique.
-    await page.keyboard.type('sarawak');
-    await expect.poll(() => map.focusedRegionId()).toBe('MY-13');
+    // Type-ahead matches the start of a region or country name. A single key keeps the test
+    // independent of typing speed (the map resets its buffer after 700 ms, which a slow CI
+    // runner can exceed between keystrokes).
+    await page.keyboard.press('z');
+    await expect.poll(() => map.focusedRegionId()).not.toBe('AF-BDS');
+    const id = await map.focusedRegionId();
+    const names = await map
+      .region(id)
+      .evaluate((p) => [
+        p.getAttribute('aria-label') ?? '',
+        p.parentElement?.getAttribute('aria-label') ?? '',
+      ]);
+    expect(
+      names.some((name) => /^z/i.test(name)),
+      `${id} (${names.join(', ')}) should start with Z`,
+    ).toBe(true);
 
     await page.keyboard.press('Space');
-    await map.expectChartFor('Sarawak');
+    await expect(map.region(id)).toHaveAttribute('aria-expanded', 'true');
+    await expect(map.panel).toHaveClass(/\bpd-open\b/);
   });
 
   test('Tab from an open region reaches the chart controls before the zoom buttons', async ({

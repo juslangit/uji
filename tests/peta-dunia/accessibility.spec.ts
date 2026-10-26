@@ -1,36 +1,54 @@
 import { expect, test } from '../../src/fixtures/peta-dunia';
-import { summarise } from '../../src/support/a11y';
+import { summarise, waitForAnimationsToFinish } from '../../src/support/a11y';
 
 test.describe('PD-10 Pass an accessibility audit', () => {
   // Audit the settled page: with motion on, axe can sample text half-way through a fade-in.
   test.use({ reducedMotion: 'reduce' });
 
-  test('the map document has no WCAG 2.2 AA violations', async ({ showcase, makeAxeBuilder }) => {
+  test('the map document has no WCAG 2.2 AA violations', async ({
+    page,
+    showcase,
+    makeAxeBuilder,
+  }) => {
     // 4,602 interactive paths: axe needs 15-40 s for the map frame depending on the engine.
     test.slow();
     await showcase.goto();
+
+    await waitForAnimationsToFinish(page);
 
     const results = await makeAxeBuilder().include('#map-frame').analyze();
 
     expect(summarise(results.violations)).toEqual([]);
   });
 
-  test('the map with a chart open has no violations', async ({ showcase, makeAxeBuilder }) => {
+  test('the map with a chart open has no violations', async ({
+    page,
+    showcase,
+    makeAxeBuilder,
+  }) => {
     test.slow();
     const map = await showcase.goto();
     await map.selectViaApi('MY-10');
     await map.expectChartFor('Selangor');
 
+    await waitForAnimationsToFinish(page);
+
     const results = await makeAxeBuilder().include('#map-frame').analyze();
 
     expect(summarise(results.violations)).toEqual([]);
   });
 
-  test('blank.html with a chart open has no violations', async ({ blank, makeAxeBuilder }) => {
+  test('blank.html with a chart open has no violations', async ({
+    page,
+    blank,
+    makeAxeBuilder,
+  }) => {
     test.slow();
     const map = await blank.goto();
     await map.clickRegion('MY-13');
     await map.expectChartFor('Sarawak');
+
+    await waitForAnimationsToFinish(page);
 
     const results = await makeAxeBuilder().analyze();
 
@@ -38,6 +56,7 @@ test.describe('PD-10 Pass an accessibility audit', () => {
   });
 
   test('the showcase page around the map has no violations', async ({
+    page,
     showcase,
     makeAxeBuilder,
   }) => {
@@ -50,6 +69,8 @@ test.describe('PD-10 Pass an accessibility audit', () => {
     //     in 2026. Open on the map", so the visible text is not part of the accessible name.
     test.fail(true, 'Peta Dunia bugs: scrollable <pre> not focusable; bar label not in name');
     await showcase.goto();
+
+    await waitForAnimationsToFinish(page);
 
     const results = await makeAxeBuilder().exclude('#map-frame').analyze();
 

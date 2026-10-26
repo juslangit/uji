@@ -1,6 +1,6 @@
 import { expect, test } from '../../src/fixtures/pandu';
 import { keyPages } from '../../src/pages/pandu/routes';
-import { summarise } from '../../src/support/a11y';
+import { summarise, waitForAnimationsToFinish } from '../../src/support/a11y';
 
 test.describe('NAV-12 Pass an accessibility audit', () => {
   // Audit the settled page: with motion on, axe can sample text half-way through a fade-in
@@ -8,17 +8,20 @@ test.describe('NAV-12 Pass an accessibility audit', () => {
   test.use({ reducedMotion: 'reduce' });
 
   for (const path of keyPages) {
-    test(`${path} has no WCAG 2.2 AA violations`, async ({ nav, makeAxeBuilder }) => {
+    test(`${path} has no WCAG 2.2 AA violations`, async ({ page, nav, makeAxeBuilder }) => {
       await nav.goto(path);
+      await waitForAnimationsToFinish(page);
       const results = await makeAxeBuilder().analyze();
       expect(summarise(results.violations)).toEqual([]);
     });
   }
 
-  test('no violations with the Trips mega-menu open', async ({ nav, makeAxeBuilder }) => {
+  test('no violations with the Trips mega-menu open', async ({ page, nav, makeAxeBuilder }) => {
     await nav.goto('/');
     await nav.trigger('Trips').click();
     await nav.expectOpen('Trips');
+
+    await waitForAnimationsToFinish(page);
 
     const results = await makeAxeBuilder().analyze();
 
@@ -31,6 +34,7 @@ test.describe('NAV-12 Pass an accessibility audit', () => {
     test.use({ viewport: { width: 390, height: 760 }, reducedMotion: 'no-preference' });
 
     test('no violations with the drawer and an accordion open', async ({
+      page,
       drawer,
       makeAxeBuilder,
     }) => {
@@ -38,6 +42,8 @@ test.describe('NAV-12 Pass an accessibility audit', () => {
       await drawer.open();
       await drawer.section('Trips').click();
       await expect(drawer.section('Trips')).toHaveAttribute('aria-expanded', 'true');
+
+      await waitForAnimationsToFinish(page);
 
       const results = await makeAxeBuilder().analyze();
 

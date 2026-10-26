@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * The accessibility bar for every audit in this suite: WCAG 2.0, 2.1 and 2.2 at levels A and
@@ -21,4 +21,21 @@ export function summarise(
     (v) =>
       `${v.id} [${v.impact ?? 'n/a'}] ${v.help} — ${v.nodes.length} node(s), first: ${v.nodes[0]?.target.join(' ') ?? '?'}`,
   );
+}
+
+/**
+ * Waits until no CSS animation or transition is running in the page. Panels and drawers fade
+ * and slide in; an audit taken mid-fade measures half-transparent text and reports contrast
+ * (or naming) failures nobody ever sees. On a slow CI runner that window is long enough to hit.
+ */
+export async function waitForAnimationsToFinish(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => document.getAnimations().filter((a) => a.playState === 'running').length,
+        ),
+      { message: 'animations should finish before an audit' },
+    )
+    .toBe(0);
 }
